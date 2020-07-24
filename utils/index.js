@@ -1,9 +1,19 @@
 const { promisify } = require('util');
 const dgram = require('dgram');
+const ora = require('ora');
 
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 const timeout = (ms, message) => new Promise((_, rej) => setTimeout(() => rej(message), ms));
+
+const waiting = (ms, message = '') => {
+  const spinner = ora(message).start();
+
+  return sleep(ms)
+    .then(() => {
+      spinner.stop();
+    });
+}
 
 function createUDPNode() {
   return dgram.createSocket('udp4');
@@ -55,6 +65,7 @@ async function sequentialExec(list, asyncFn) {
 module.exports = {
   sleep,
   timeout,
+  waiting,
   store,
   createUDPNode,
   sequentialExec,

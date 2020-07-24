@@ -1,5 +1,6 @@
 function mapMessageToStateStr(message) {
   const state = message
+    .toString('utf-8')
     .split(';')
     .reduce((acc, item) => {
       const [key, value] = item.split(':');

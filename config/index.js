@@ -14,9 +14,10 @@ const drone = {
 };
 
 const videoStream = {
+  protocol: 'udp',
   address: '0.0.0.0',
   port: 11111,
-  filePath: './video.h264',
+  lastCapture: './last_capture.mp4',
 };
 
 const commands = {

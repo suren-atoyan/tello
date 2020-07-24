@@ -1,39 +1,46 @@
 const { createWriteStream } = require('fs');
 const { curry, compose } = require('ramda');
-const cv = require('opencv4nodejs');
+const ffmpeg = require('fluent-ffmpeg');
 
 const { mapMessageToStateStr, parseResponseData } = require('../functions');
-const { createUDPNode, promisifyUDPNode } = require('../utils');
+const { createUDPNode, promisifyUDPNode, store } = require('../utils');
 
 const handleSocketError = curry((socket, err) => {
   console.log('Tello Commander Socket Error:', err);
   socket.close();
 });
 
-function handleVideoStream(options, socket) {
-  const file = createWriteStream(options.filePath);
-  socket.on('message', buffer => file.write(buffer));
-}
-
-function captureVideoFrames(options, socket) {
-  // TBD
-}
-
-function bindListeners(options, socket) {
+function attachListeners(socket) {
   socket.on('error', handleSocketError(socket));
   socket.on('close', socket.close);
+
+  return socket;
+}
+
+function bindAddress(options, socket) {
   socket.bind(options.port, options.address);
 
   return socket;
 }
 
-function listenToMessages(socket) {
-  // TODO: make it optional
-  // socket.on('message', msg => {
-  //   mapMessageToStateStr(msg.toString('utf-8'));
-  // });
+function createReceiver(socket) {
+  function handleMessage(msg) {
+    console.log(mapMessageToStateStr(msg));
+  }
 
-  return socket;
+  function on() {
+    socket.on('message', handleMessage);
+  }
+
+  function off() {
+    socket.off('message', handleMessage);
+  }
+
+  return {
+    socket,
+    on,
+    off,
+  };
 }
 
 const handleResponse = curry((resolve, reject, response) => {
@@ -62,11 +69,55 @@ async function createChannel(options, socket) {
     }));
 }
 
+function setupFfmpg({ protocol, address, port, lastCapture }) {
+  return () => ffmpeg(`${protocol}://${address}:${port}`).addOption('-f');
+}
+
+function createVideoController(options, getCommand) {
+  const { state, setState } = store({
+    file: options.lastCapture,
+    sdl: false,
+    sdlWindowTitle: 'tello video stream capture',
+    isCapturing: false,
+    command: getCommand(),
+  });
+
+  function kill() {
+    state.command.kill();
+    setState({ isCapturing: false });
+  }
+
+  function capture() {
+    if (state.isCapturing) {
+      kill();
+    }
+
+    state.command.output(state.file);
+
+    if (state.sdl) {
+      state.command.addOption('sdl', state.sdlWindowTitle);
+    }
+
+    // sample
+    // ffmpeg -i `${protocol}://${address}:${port}` -f sdl "tello video stream capture"
+    state.command.run();
+  }
+
+  return {
+    config(_config) {
+      setState({ ..._config, command: getCommand() });
+      return capture;
+    }
+  }
+}
+
 module.exports = {
   createUDPNode: compose(promisifyUDPNode, createUDPNode),
-  bindListeners: curry(bindListeners),
   createChannel: curry(createChannel),
-  handleVideoStream: curry(handleVideoStream),
-  captureVideoFrames: curry(captureVideoFrames),
-  listenToMessages,
+  createVideoController: curry(createVideoController),
+  createReceiver,
+
+  bindAddress: curry(bindAddress),
+  setupFfmpg: setupFfmpg,
+  attachListeners,
 };

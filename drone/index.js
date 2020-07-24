@@ -2,10 +2,12 @@ const { compose } = require('ramda');
 
 const {
   createUDPNode,
-  bindListeners,
-  listenToMessages,
+  attachListeners,
+  bindAddress,
+  createReceiver,
   createChannel,
-  handleVideoStream,
+  setupFfmpg,
+  createVideoController,
 } = require('../effects');
 const { store } = require('../utils');
 const { messages } = require('../config');
@@ -20,6 +22,51 @@ const { state, setState } = store({
   isConnected: false,
   commander: () => console.error(messages.init.notInitialized),
 });
+
+// according to the official documentation of Tello
+// https://dl-cdn.ryzerobotics.com/downloads/Tello/Tello%20SDK%202.0%20User%20Guide.pdf
+// There are some steps that should be done to be able
+// to send commands or receive messages from Tello
+// The required steps from Tello docs are quoted below
+
+/* quoted from docs
+
+=================================
+Setup commander
+
+Step 1 - Set up a UDP client on the PC, Mac, or mobile device to send and
+receive messages from the Tello via the same port
+=================================
+
+=================================
+Send "command"
+
+Step 2 - Before sending any other commands, send “command” to the Tello
+via UDP PORT 8889 to initiate SDK mode
+=================================
+
+=================================
+Setup state receiver
+
+Step 3 - Set up a UDP server on the PC, Mac, or mobile device and check
+the message from IP 0.0.0.0 via UDP PORT 8890. Steps 1 and 2 must be completed
+before attempting step 3. For more details, refer to the Tello State section.
+=================================
+
+=================================
+Setup video stream receiver
+
+Step 4 - Set up a UDP server on the PC, Mac, or mobile device
+and check the message from IP 0.0.0.0 via UDP PORT 11111
+=================================
+
+=================================
+streamOn/streamOff
+
+Step 5 - Send “streamon” to the Tello via UDP PORT 8889 to start streaming.
+Steps 1 and 2 must be completed before attempting step 5
+=================================
+*/
 
 async function connect() {
   return await state.commander('command').then(() => setState({ isConnected: true }));
@@ -37,51 +84,25 @@ function commander(...args) {
   }
 }
 
-async function init() {
-  // according to the official documentation of Tello
-  // https://dl-cdn.ryzerobotics.com/downloads/Tello/Tello%20SDK%202.0%20User%20Guide.pdf
+const videoController = compose(
+  createVideoController(options.videoStream),
+  setupFfmpg,
+)(options.videoStream);
 
-  /* Setup commander */
-  // Step 1 - Set up a UDP client on the PC, Mac, or mobile device to send and
-  // receive messages from the Tello via the same port
+const receiver = compose(
+  createReceiver,
+  bindAddress(options.receiver),
+  attachListeners,
+  createUDPNode,
+)();
+
+async function init() {
   const commander = await compose(
     createChannel(options.drone),
-    bindListeners(options.local),
-    createUDPNode
+    bindAddress(options.local),
+    attachListeners,
+    createUDPNode,
   )();
-
-  /* Send "command" */
-  // Step 2 - Before sending any other commands, send “command” to the Tello
-  // via UDP PORT 8889 to initiate SDK mode
-
-  // there is exported function called `connect` that is responsible
-  // for step 2
-
-  /* Setup state receiver */
-  // Step 3 - Set up a UDP server on the PC, Mac, or mobile device and check
-  // the message from IP 0.0.0.0 via UDP PORT 8890. Steps 1 and 2 must be completed
-  // before attempting step 3. For more details, refer to the Tello State section.
-  compose(
-    listenToMessages,
-    bindListeners(options.receiver),
-    createUDPNode
-  )();
-
-  /* Setup video stream receiver */
-  // Step 4 - Set up a UDP server on the PC, Mac, or mobile device
-  // and check the message from IP 0.0.0.0 via UDP PORT 11111
-  compose(
-    handleVideoStream(options.videoStream),
-    bindListeners(options.videoStream),
-    createUDPNode
-  )();
-
-  /* streamOn/streamOff */
-  // Step 5 - Send “streamon” to the Tello via UDP PORT 8889 to start streaming.
-  // Steps 1 and 2 must be completed before attempting step 5
-
-  // you can on and off video stream by control.streamOn and control./streamOff
-  // (functions exported from this file) correspondingly
 
   setState({ commander });
 }
@@ -90,6 +111,8 @@ module.exports = {
   config,
   init,
   connect,
+  videoController,
+  receiver,
   // Control Commands
   control: {
     /**
