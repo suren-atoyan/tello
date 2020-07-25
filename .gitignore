@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-last_capture.mp4
-video.h264
+*.mp4
+*.h264
+*.log
 
 # dependencies
 /node_modules

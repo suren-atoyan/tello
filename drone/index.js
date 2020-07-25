@@ -2,13 +2,18 @@ const { compose } = require('ramda');
 
 const {
   createUDPNode,
-  attachListeners,
-  bindAddress,
   createReceiver,
   createChannel,
+  createCommander,
+  attachListeners,
+  bindAddress,
+} = require('../communication');
+
+const {
   setupFfmpg,
   createVideoController,
-} = require('../effects');
+} = require('../mediaProcessing');
+
 const { store } = require('../utils');
 const { messages } = require('../config');
 
@@ -16,6 +21,8 @@ const {
   options,
   commands,
 } = require('../config');
+
+/* =========================================================== */
 
 const { state, setState } = store({
   options,
@@ -70,6 +77,7 @@ Steps 1 and 2 must be completed before attempting step 5
 
 async function connect() {
   return await state.commander('command').then(() => setState({ isConnected: true }));
+  // return Promise.resolve();
 }
 
 function config(options) {
@@ -89,7 +97,7 @@ const videoController = compose(
   setupFfmpg,
 )(options.videoStream);
 
-const receiver = compose(
+const stateReceiver = compose(
   createReceiver,
   bindAddress(options.receiver),
   attachListeners,
@@ -98,6 +106,7 @@ const receiver = compose(
 
 async function init() {
   const commander = await compose(
+    createCommander,
     createChannel(options.drone),
     bindAddress(options.local),
     attachListeners,
@@ -107,12 +116,14 @@ async function init() {
   setState({ commander });
 }
 
+/* =========================================================== */
+
 module.exports = {
   config,
   init,
   connect,
   videoController,
-  receiver,
+  stateReceiver,
   // Control Commands
   control: {
     /**
@@ -225,7 +236,7 @@ module.exports = {
      * Note: "x", "y", and "z" values can’t be set between -20 – 20 simultaneously
      */
     jump: (x, y, z, speed, yaw, mid1, mid2) =>
-      commander(commands.control.jump.command, jump, x, y, z, speed, yaw, mid1, mid2),
+      commander(commands.control.jump.command, x, y, z, speed, yaw, mid1, mid2),
   },
   set: {
     /**

@@ -1,3 +1,5 @@
+/* =========================================================== */
+
 const local = {
   address: '0.0.0.0',
   port: 8889,
@@ -382,6 +384,8 @@ const messages = {
     notConnected: 'drone is not connected; run `dron.connect()`',
   },
 };
+
+/* =========================================================== */
 
 module.exports = {
   options: {

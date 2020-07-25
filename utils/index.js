@@ -1,6 +1,6 @@
-const { promisify } = require('util');
-const dgram = require('dgram');
 const ora = require('ora');
+
+/* =========================================================== */
 
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
@@ -15,41 +15,34 @@ const waiting = (ms, message = '') => {
     });
 }
 
-function createUDPNode() {
-  return dgram.createSocket('udp4');
-}
+function store(initial, handlers = {}) {
+  if (!initial) {
+    throw new Error('initial state is required');
+  }
 
-function promisifyUDPNode(node) {
-  // unfortunately, there is no way to universally
-  // make the instance of the socket promisified.
-  // there are different types of functions plus a chain of __proto__s,
-  // so to avoid Frankensteins, at this moment
-  // it would be better to promisify only those methods that
-  // we know we are going to use (and manually)
-
-  // Socket
-  node.connect = promisify(node.connect);
-  node.disconnect = promisify(node.disconnect);
-  node.send = promisify(node.send);
-  node.close = promisify(node.close);
-
-  return node;
-}
-
-// very simple state managment tool
-// for internal (utils) usage
-
-function store(initial = {}) {
   const _ = {
     state: initial,
     setState,
   };
 
-  function setState(change) {
-    Object.assign(_.state, change);
+  function setState(changes) {
+    // check only in development
+    validateChanges(initial, changes);
+    Object.assign(_.state, changes);
+    Object.keys(changes).forEach(field => handlers[field] && handlers[field](changes[field]));
   }
 
   return _;
+}
+
+function validateChanges(initial, changes) {
+  if (typeof changes !== 'object') {
+    throw new Error('provided value of changes should be an object');
+  }
+
+  if (Object.keys(changes).some(field => !Object.prototype.hasOwnProperty.call(initial, field))) {
+    throw new Error('It seams you want to change a field in the state that is not specified in the "initial" state');
+  }
 }
 
 async function sequentialExec(list, asyncFn) {
@@ -62,12 +55,15 @@ async function sequentialExec(list, asyncFn) {
   return values;
 }
 
+const removeTabs = str => str.trim().replace(/^ {4}/gm, '');
+
+/* =========================================================== */
+
 module.exports = {
   sleep,
   timeout,
   waiting,
   store,
-  createUDPNode,
   sequentialExec,
-  promisifyUDPNode,
+  removeTabs,
 };

@@ -1,13 +1,15 @@
 const inquirer = require('inquirer');
-const { flip, path, curry } = require('ramda');
 const ora = require('ora');
 const chalk = require('chalk');
 const figlet = require('figlet');
+const { flip, path, curry } = require('ramda');
 
 const drone = require('../drone');
 const { commands, messages } = require('../config');
 const { mapCommandToOption } = require('../functions');
-const { timeout, sequentialExec, sleep } = require('../utils');
+const { timeout, sequentialExec } = require('../utils');
+
+/* =========================================================== */
 
 inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
 
@@ -111,5 +113,7 @@ const validate = curry((param, _input) => {
 });
 
 require.main && simulate();
+
+/* =========================================================== */
 
 module.exports = simulate;
