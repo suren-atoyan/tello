@@ -77,7 +77,6 @@ Steps 1 and 2 must be completed before attempting step 5
 
 async function connect() {
   return await state.commander('command').then(() => setState({ isConnected: true }));
-  // return Promise.resolve();
 }
 
 function config(options) {
@@ -92,10 +91,11 @@ function commander(...args) {
   }
 }
 
-const videoController = compose(
-  createVideoController(options.videoStream),
-  setupFfmpg,
-)(options.videoStream);
+const videoStream = compose(
+  bindAddress(options.videoStream),
+  attachListeners,
+  createUDPNode,
+)();
 
 const stateReceiver = compose(
   createReceiver,
@@ -122,7 +122,7 @@ module.exports = {
   config,
   init,
   connect,
-  videoController,
+  videoStream,
   stateReceiver,
   // Control Commands
   control: {

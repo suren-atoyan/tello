@@ -1,12 +1,17 @@
-const { curry } = require('ramda');
+const { curry, compose } = require('ramda');
 const ffmpeg = require('fluent-ffmpeg');
+const cv = require('opencv4nodejs');
 
 const { store } = require('../utils');
 
 /* =========================================================== */
 
-function setupFfmpg({ protocol, address, port }) {
-  return () => ffmpeg(`${protocol}://${address}:${port}`).addOption('-f');
+function getVideoStreamUrl({ protocol, address, port }) {
+  return `${protocol}://${address}:${port}`;
+}
+
+function setupFfmpg(videoStreamUrl) {
+  return () => ffmpeg(videoStreamUrl).addOption('-f');
 }
 
 function createVideoController(options, getCommand) {
@@ -39,11 +44,17 @@ function createVideoController(options, getCommand) {
     state.command.run();
   }
 
+  function captureCV() {
+    return new cv.VideoCapture('udp://0.0.0.0:11111');
+  }
+
   return {
     config(_config) {
       setState({ ..._config, command: getCommand() });
       return capture;
-    }
+    },
+
+    captureCV,
   }
 }
 
@@ -51,5 +62,5 @@ function createVideoController(options, getCommand) {
 
 module.exports = {
   createVideoController: curry(createVideoController),
-  setupFfmpg: setupFfmpg,
+  setupFfmpg: compose(setupFfmpg, getVideoStreamUrl),
 };

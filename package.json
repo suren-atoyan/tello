@@ -10,12 +10,16 @@
     "inquirer": "^7.3.0",
     "inquirer-autocomplete-prompt": "^1.0.2",
     "lodash.isnumber": "^3.0.3",
+    "opencv4nodejs": "^5.6.0",
     "ora": "^4.0.5",
     "ramda": "^0.27.0",
     "winston": "^3.3.3"
   },
   "scripts": {
     "lint": "eslint ."
+  },
+  "opencv4nodejs": {
+    "disableAutoBuild": 1
   },
   "devDependencies": {
     "eslint": "^7.5.0"

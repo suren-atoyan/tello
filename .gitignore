@@ -3,6 +3,7 @@
 *.mp4
 *.h264
 *.log
+*.avi
 
 # dependencies
 /node_modules
