@@ -56,9 +56,11 @@ function getFrame(vCap, fn) {
     fn(getFrame());
   }
 
-  while(true) {
-    sendCurrentFrame();
-  }
+  setInterval(sendCurrentFrame, 10);
+
+  // while(true) {
+  //   sendCurrentFrame();
+  // }
 }
 
 function resizeByScale(scale, frame) {

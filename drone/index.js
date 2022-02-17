@@ -91,11 +91,11 @@ function commander(...args) {
   }
 }
 
-const videoStream = compose(
-  bindAddress(options.videoStream),
-  attachListeners,
-  createUDPNode,
-)();
+// const videoStream = compose(
+//   bindAddress(options.videoStream),
+//   attachListeners,
+//   createUDPNode,
+// )();
 
 const stateReceiver = compose(
   createReceiver,
@@ -122,7 +122,7 @@ module.exports = {
   config,
   init,
   connect,
-  videoStream,
+  // videoStream,
   stateReceiver,
   // Control Commands
   control: {
